@@ -1,7 +1,18 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+try:  # Prefer real package but keep a fallback for offline test runs.
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:  # pragma: no cover - fallback path
+    from pydantic import BaseModel
+
+    def SettingsConfigDict(**kwargs):  # type: ignore
+        return kwargs
+
+    class BaseSettings(BaseModel):  # type: ignore
+        class Config:
+            extra = "ignore"
+            env_prefix = "SMART_REPLY_"
 
 
 class Settings(BaseSettings):
@@ -11,8 +22,11 @@ class Settings(BaseSettings):
     api_key: str | None = None
     rate_limit_per_minute: int = 60
 
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4.1-mini"
+    openai_base_url: str | None = None
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
-
