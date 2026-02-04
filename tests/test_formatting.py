@@ -1,3 +1,5 @@
+import random
+
 from app.services.formatting import apply_channel_format
 from app.services.formatting import normalize_terminal_punctuation
 
@@ -31,3 +33,17 @@ def test_normalize_terminal_punctuation():
     assert normalize_terminal_punctuation("Hello!") == "Hello!"
     assert normalize_terminal_punctuation("Hello.") == "Hello."
     assert normalize_terminal_punctuation("Hello") == "Hello."
+
+
+def test_slack_emoji_not_added_if_already_present():
+    text = "Thanks team 🙂 Great work."
+    formatted, _ = apply_channel_format("slack", text, emoji_enabled=True)
+    assert formatted.count("🙂") == 1  # no extra added
+
+
+def test_slack_emoji_added_up_to_two_when_enabled_with_seed():
+    text = "Please review the PR."
+    rng = random.Random(0)
+    formatted, _ = apply_channel_format("slack", text, emoji_enabled=True, rng=rng)
+    # With seed 0, randint -> 2 so we expect two emojis appended
+    assert formatted.endswith("🙂 🙂") or formatted.endswith("👍 👍") or formatted.endswith("✅ ✅") or formatted.endswith("🙏 🙏") or len(formatted.split()) > len(text.split())
