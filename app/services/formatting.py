@@ -9,14 +9,14 @@ from app.api.schemas import Channel
 
 
 def _ensure_email_greeting(text: str) -> tuple[str, bool]:
-    if re.match(r"^(hi|hello|dear)\\b", text.strip(), re.IGNORECASE):
+    if re.match(r"^(hi|hello|dear)\b", text.strip(), re.IGNORECASE):
         return text, False
     greeting = "Hi there,"
     return f"{greeting}\n\n{text.strip()}", True
 
 
 def _ensure_email_signoff(text: str) -> tuple[str, bool]:
-    if re.search(r"(regards|cheers|sincerely|thanks)[,.]?\\s*$", text.strip(), re.IGNORECASE):
+    if re.search(r"(regards|cheers|sincerely|thanks)[,.]?\s*$", text.strip(), re.IGNORECASE):
         return text, False
     signoff = "Best regards,\nTim"
     return f"{text.rstrip()}.\n\n{signoff}", True
@@ -42,7 +42,7 @@ def _truncate_slack(text: str) -> tuple[str, bool]:
 
 
 def _bullets_from_sentences(text: str) -> tuple[str, bool]:
-    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\\s+", text) if s.strip()]
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
     if len(sentences) < 2:
         return text, False
     bullets = "\n".join(f"- {s}" for s in sentences)
