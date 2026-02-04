@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.api.schemas import Draft, DraftRequest, DraftResponse, Tone
 from app.core.config import get_settings
+from app.services.formatting import apply_channel_format
 from app.services.prompts import SYSTEM_PROMPT, build_user_prompt
 
 logger = logging.getLogger(__name__)
@@ -18,48 +19,60 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
     Lightweight fallback when no OpenAI key is configured.
     Keeps the service usable in local/dev without external calls.
     """
-    base_text = (
-        f"Thanks for reaching out. {request.incoming_message.strip()} "
-        f"{request.context or ''}".strip()
-    )
+    base_text = request.incoming_message.strip()
 
-    flavours: list[tuple[str, str]] = [
-        ("Here is a polished reply that keeps things clear.", request.tone),
-        ("A warmer, more personable take.", "friendly"),
-        ("A crisp version that gets straight to the point.", "concise"),
+    flavours: list[tuple[str, str, str]] = [
+        ("Option 1", "Clear and concise response.", "concise"),
+        ("Option 2", "Warm and collaborative reply.", "friendly"),
+        ("Option 3", "Direct, action-focused note.", "assertive"),
     ]
 
-    def apply_constraints(text: str) -> str:
+    def apply_constraints(text: str) -> tuple[str, bool]:
         constraints = request.constraints
+        changed = False
         if constraints is None:
-            return text
+            return text, changed
         result = text
         if constraints.must_include_question and "?" not in result:
             result = f"{result} What do you think?"
+            changed = True
         if constraints.avoid_phrases:
             for phrase in constraints.avoid_phrases:
                 if phrase.lower() in result.lower():
                     result = result.replace(phrase, "").strip()
-        if constraints.word_limit:
-            result = shorten(result, width=constraints.word_limit * 6, placeholder="...")
-        return result
+                    changed = True
+        if constraints.max_words:
+            before = result
+            result = shorten(result, width=constraints.max_words * 6, placeholder="…")
+            changed = changed or result != before
+        return result, changed
 
-    drafts: list[DraftCandidate] = []
-    for idx, (preface, tone) in enumerate(flavours):
-        text = apply_constraints(f"{preface} {base_text}")
-        drafts.append(
-            Draft(
-                label=f"Option {idx + 1}",
-                text=text,
-            )
+    drafts: list[Draft] = []
+    formatting_hits = 0.0
+    constraint_hits = 0.0
+
+    emoji_enabled = bool(request.options and request.options.emoji)
+
+    for label, preface, tone in flavours:
+        text, constraint_changed = apply_constraints(f"{preface} {base_text}")
+        constraint_hits += int(constraint_changed)
+        formatted_text, formatting_score = apply_channel_format(
+            request.channel, text, emoji_enabled=emoji_enabled
         )
+        formatting_hits += formatting_score
+        drafts.append(Draft(label=label, text=formatted_text))
+
+    confidence = min(
+        1.0,
+        0.5 + (formatting_hits / len(flavours)) * 0.25 + (constraint_hits / len(flavours)) * 0.25,
+    )
     return DraftResponse(
         drafts=drafts,
         request_id="stub",
-        detected_tone=request.tone,
+        detected_tone="neutral-professional",
         channel_applied=request.channel,
         notes="Stub generator used (no OpenAI key).",
-        confidence_score=0.75,
+        confidence_score=round(confidence, 2),
     )
 
 
