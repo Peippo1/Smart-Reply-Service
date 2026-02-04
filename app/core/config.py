@@ -11,12 +11,10 @@ except ImportError:  # pragma: no cover - fallback path
         return kwargs
 
     class BaseSettings(BaseModel):  # type: ignore
-        class Config:
-            extra = "ignore"
-            env_prefix = "SMART_REPLY_"
+        model_config = {"extra": "ignore", "env_prefix": "SMART_REPLY_"}
 
         def __init__(self, **data):  # type: ignore
-            prefix = getattr(self.Config, "env_prefix", "")
+            prefix = self.model_config.get("env_prefix", "")
             for field in self.__class__.model_fields:
                 env_key = f"{prefix}{field}".upper()
                 if env_key in os.environ and field not in data:
