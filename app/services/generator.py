@@ -19,14 +19,22 @@ def _context_keyword(context: str | None) -> str | None:
     return None
 
 
-def _context_clause(keyword: str | None) -> str:
+def _extract_phrase(context: str | None) -> str | None:
     """
-    Produce a short, natural clause to ground the draft in context.
-    Avoids awkward phrases like 'this context' or 'the this context'.
+    Extract a meaningful noun phrase from context, stripping common lead-ins.
+    Returns lowercase phrase or None if unusable.
     """
-    if keyword:
-        return f"given this is for {keyword}"
-    return "given the context here"
+    if not context:
+        return None
+    lowered = context.strip().lower()
+    for prefix in ("this is for", "this relates to", "for", "regarding", "about"):
+        if lowered.startswith(prefix):
+            lowered = lowered[len(prefix):].strip()
+            break
+    lowered = lowered.strip(" .,!?:;")
+    if not lowered or lowered == "this":
+        return None
+    return lowered
 
 
 def generate_base_drafts(request: DraftRequest) -> list[Draft]:
@@ -36,26 +44,28 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     Drafts differ by voice (Direct/Friendly/Action-oriented) and lightly weave in context.
     """
     base = request.incoming_message.strip()
-    keyword = _context_keyword(request.context)
-    def with_context(prefix: str) -> str:
-        if not keyword:
-            return ""
-        return f"{prefix} {keyword} context, "
-
-    clause = _context_clause(keyword)
+    phrase = _extract_phrase(request.context)
 
     if request.channel == "slack":
-        direct = f"{base} ({clause})" if keyword else base
-        friendly = f"Hey team, {base} ({clause}). Appreciate it!" if keyword else f"Hey team, {base} Appreciate it!"
-        action = f"{base} ({clause}). can we align on next steps today?"
+        direct = f"{base}" if not phrase else f"Given this is for {phrase}, {base}"
+        friendly = f"Hey team, when you have a moment, {base}" if not phrase else f"Hey team, when you have a moment, and since this is for {phrase}, {base}"
+        action = f"{base} Can we align on next steps today?" if not phrase else f"{base} It’s for {phrase}. Can we align on next steps today?"
     elif request.channel == "linkedin":
-        direct = f"{base} ({clause})" if keyword else base
-        friendly = f"Appreciate the perspective—{base} ({clause})" if keyword else f"Appreciate the perspective. {base}"
-        action = f"{base} If you’re open to it, happy to connect and compare notes on {keyword or 'this'}."
+        direct = f"{base}" if not phrase else f"As this is for {phrase}, {base}"
+        friendly = f"Appreciate the perspective. {base}" if not phrase else f"Appreciate the perspective—since this is for {phrase}, {base}"
+        action = f"{base} If you’re open to it, happy to connect and compare notes." if not phrase else f"{base} If you’re open to it, happy to connect and compare notes for {phrase}."
     else:  # email or other
-        direct = f"{base} ({clause})" if keyword else base
-        friendly = f"Thanks for sharing. {base} ({clause})" if keyword else f"Thanks for sharing. {base}"
-        action = f"{base} ({clause}). when do you need this by?"
+        direct = f"{base}" if not phrase else f"Given this is for {phrase}, {base}"
+        friendly = (
+            f"When you have a moment, could you {base.lower()}"
+            if not phrase
+            else f"When you have a moment—since this is for {phrase}—could you {base.lower()}"
+        )
+        if "metrics" in base.lower() or "reports" in base.lower() or "figures" in base.lower():
+            deadline_q = "When do you need them by?"
+        else:
+            deadline_q = "What deadline are you working to?"
+        action = f"{base} {deadline_q}" if not phrase else f"Given this is for {phrase}, {base} {deadline_q}"
 
     drafts = [
         Draft(label="Direct", text=direct),
