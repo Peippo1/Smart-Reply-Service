@@ -99,6 +99,16 @@ def test_rate_limit_returns_429(monkeypatch):
     assert second.json()["detail"] == "Rate limit exceeded."
 
 
+def test_root_redirects_to_docs(client):
+    response = client.get("/")
+    assert response.status_code in (200, 302, 307)
+    if response.is_redirect:
+        assert response.headers["location"] == "/docs"
+    else:
+        # Some client versions follow redirects; ensure final URL content is docs HTML/json
+        assert "/docs" in response.text or "Swagger UI" in response.text
+
+
 def test_schema_validation_rejects_bad_tone(client):
     payload = {"incoming_message": "Hi", "channel": "email", "tone": "not-a-tone"}
     response = client.post("/v1/reply/draft", json=payload)
