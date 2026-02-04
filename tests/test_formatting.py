@@ -9,6 +9,7 @@ def test_email_formatting_adds_greeting_and_signoff():
     formatted, score = apply_channel_format("email", text)
     assert "Hi" in formatted.splitlines()[0]
     assert "Best regards" in formatted
+    assert formatted.strip().endswith("Best regards,\nTim")
     assert score > 0
     assert ".." not in formatted
     assert "?." not in formatted

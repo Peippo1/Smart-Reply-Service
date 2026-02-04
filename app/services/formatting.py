@@ -111,7 +111,6 @@ def apply_channel_format(channel: Channel, text: str, emoji_enabled: bool = Fals
         applied += changed
         text, changed = _ensure_email_signoff(text)
         applied += changed
-        text = normalize_terminal_punctuation(text)
         return text, applied / 3
 
     if channel == "slack":
