@@ -36,32 +36,38 @@ def build_user_prompt(request: DraftRequest, language: str | None = None) -> str
     """
     constraint_lines: list[str] = []
     if request.constraints:
-        if request.constraints.word_limit:
-            constraint_lines.append(f"- word_limit: {request.constraints.word_limit}")
+        if request.constraints.max_words:
+            constraint_lines.append(f"- max_words: {request.constraints.max_words}")
         if request.constraints.must_include_question:
             constraint_lines.append("- must_include_question: true")
         if request.constraints.avoid_phrases:
             constraint_lines.append(f"- avoid_phrases: {request.constraints.avoid_phrases}")
     constraint_block = "\n".join(constraint_lines) if constraint_lines else "None"
 
-    language_pref = language or "UK English (default)"
+    language_pref = language or (
+        "UK English (default)"
+        if not request.options or request.options.uk_english
+        else "User-specified language"
+    )
 
     return (
         "Generate reply drafts for the following input.\n"
         f"- channel: {request.channel}\n"
         f"- tone: {request.tone}\n"
         f"- language: {language_pref}\n"
-        f"- message: {request.message}\n"
+        f"- message: {request.incoming_message}\n"
         f"- context: {request.context or 'None'}\n"
         f"- constraints:\n{constraint_block}\n\n"
         "Schema:\n"
         "{\n"
+        '  \"request_id\": str,\n'
+        '  \"detected_tone\": str,\n'
+        '  \"channel_applied\": str,\n'
         '  \"drafts\": [\n'
-        "    {\"text\": str, \"tone_label\": str, \"rationale\": str, \"confidence\": float}\n"
+        "    {\"label\": str, \"text\": str}\n"
         "  ],\n"
-        '  \"channel\": str,\n'
-        '  \"requested_tone\": str,\n'
-        '  \"evidence\": str\n'
+        '  \"notes\": str,\n'
+        '  \"confidence_score\": float\n'
         "}\n"
         "Rules:\n"
         "- Exactly 3 drafts; each draft must have a distinct style.\n"
