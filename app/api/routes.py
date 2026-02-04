@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends
 
 from app.api.schemas import DraftRequest, DraftResponse, HealthResponse
@@ -5,7 +7,9 @@ from app.middleware.auth import verify_api_key
 from app.middleware.rate_limit import rate_limit_dependency
 from app.services.llm import generate_reply_drafts
 
-router = APIRouter()
+router = APIRouter(tags=["reply"], responses={429: {"description": "Rate limit exceeded"}})
+logger = logging.getLogger(__name__)
+
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -17,8 +21,24 @@ async def health() -> HealthResponse:
     "/v1/reply/draft",
     response_model=DraftResponse,
     dependencies=[Depends(verify_api_key)],
+    summary="Generate three channel-appropriate reply drafts",
+    description=(
+        "Generates three reply drafts tailored to the specified channel (email, Slack, LinkedIn). "
+        "Applies channel-specific formatting rules (greeting/sign-off for email, bullets/length for Slack, "
+        "short paragraphs and soft CTA for LinkedIn) and honours constraints like max words, must-include-question, "
+        "and avoid phrases. Defaults to UK English spelling unless overridden via options."
+    ),
 )
 async def create_reply_draft(
     request: DraftRequest, rate_limit=Depends(rate_limit_dependency)
 ) -> DraftResponse:
-    return generate_reply_drafts(request)
+    response = generate_reply_drafts(request)
+    logger.info(
+        "drafts.generated",
+        extra={
+            "request_id": response.request_id,
+            "channel": response.channel_applied,
+            "detected_tone": response.detected_tone,
+        },
+    )
+    return response
