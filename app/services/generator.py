@@ -12,8 +12,8 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     """
     base = request.incoming_message.strip()
     drafts = [
-        Draft(label="Option 1", text=f"Quick summary: {base}"),
-        Draft(label="Option 2", text=f"Friendly take: {base}"),
-        Draft(label="Option 3", text=f"Action-oriented: {base}"),
+        Draft(label="Direct", text=f"{base}"),
+        Draft(label="Friendly", text=f"Thanks for raising this—{base}"),
+        Draft(label="Action-oriented", text=f"{base} Could you confirm the next step or timing?"),
     ]
     return drafts
