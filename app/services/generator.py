@@ -19,6 +19,16 @@ def _context_keyword(context: str | None) -> str | None:
     return None
 
 
+def _context_clause(keyword: str | None) -> str:
+    """
+    Produce a short, natural clause to ground the draft in context.
+    Avoids awkward phrases like 'this context' or 'the this context'.
+    """
+    if keyword:
+        return f"given this is for {keyword}"
+    return "given the context here"
+
+
 def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     """
     Produce three simple drafts based on the incoming request.
@@ -32,19 +42,20 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
             return ""
         return f"{prefix} {keyword} context, "
 
+    clause = _context_clause(keyword)
+
     if request.channel == "slack":
-        direct = f"{with_context('With the')}{base}"
-        friendly = f"Hey team, {with_context('since it\'s about the').strip()} {base} Appreciate it!"
-        action = f"{with_context('Given the')} {base} Can we align on next steps today?"
+        direct = f"{base} ({clause})" if keyword else base
+        friendly = f"Hey team, {base} ({clause}). Appreciate it!" if keyword else f"Hey team, {base} Appreciate it!"
+        action = f"{base} ({clause}). can we align on next steps today?"
     elif request.channel == "linkedin":
-        direct = f"Since you're working on {keyword}," if keyword else base
-        direct = f"{direct} {base}" if keyword else direct
-        friendly = f"Appreciate the perspective on {keyword}, {base}" if keyword else f"Appreciate the perspective. {base}"
+        direct = f"{base} ({clause})" if keyword else base
+        friendly = f"Appreciate the perspective—{base} ({clause})" if keyword else f"Appreciate the perspective. {base}"
         action = f"{base} If you’re open to it, happy to connect and compare notes on {keyword or 'this'}."
     else:  # email or other
-        direct = f"{with_context('Given the')}{base}"
-        friendly = f"Thanks for flagging this{f' in {keyword}' if keyword else ''}. {base}"
-        action = f"{with_context('Considering the')}{base} Please confirm the next steps or timeline."
+        direct = f"{base} ({clause})" if keyword else base
+        friendly = f"Thanks for sharing. {base} ({clause})" if keyword else f"Thanks for sharing. {base}"
+        action = f"{base} ({clause}). when do you need this by?"
 
     drafts = [
         Draft(label="Direct", text=direct),
