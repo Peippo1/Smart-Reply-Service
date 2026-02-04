@@ -11,7 +11,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Visit `http://localhost:8000/docs` for interactive API docs.
+Visit `http://localhost:8000/docs` for interactive API docs (public by default; consider restricting in prod).
 
 ### Example requests
 
@@ -39,21 +39,48 @@ curl -X POST http://localhost:8000/v1/reply/draft \
 ## Endpoints
 
 - `GET /health` — basic liveness probe.
-- `POST /v1/reply/draft` — generate three reply drafts. Example body:
+- `POST /v1/reply/draft` — generate three reply drafts with channel-aware formatting, constraint enforcement, and confidence scoring. Example body:
 
 ```json
 {
-  "message": "Can you share the latest metrics for Q1?",
+  "incoming_message": "Can you share the latest metrics for Q1?",
   "context": "Thread with finance leadership",
   "channel": "email",
   "tone": "professional",
   "constraints": {
-    "word_limit": 80,
+    "max_words": 120,
     "must_include_question": true,
     "avoid_phrases": ["ASAP"]
+  },
+  "options": {
+    "emoji": false,
+    "uk_english": true
   }
 }
 ```
+
+Response shape:
+```json
+{
+  "request_id": "string",
+  "detected_tone": "neutral-professional",
+  "channel_applied": "email",
+  "drafts": [
+    {"label": "Option 1", "text": "..." },
+    {"label": "Option 2", "text": "..." },
+    {"label": "Option 3", "text": "..." }
+  ],
+  "notes": "Applied channel formatting; enforced constraints.",
+  "confidence_score": 0.0
+}
+```
+
+### Auth & rate limiting
+- API key is optional; set `SMART_REPLY_API_KEY` to require `x-api-key`.
+- Rate limit defaults to 60 req/min per IP; override with `SMART_REPLY_RATE_LIMIT_PER_MINUTE`.
+
+### OpenAI integration (future-ready)
+- Stub drafts are generated locally. To switch to OpenAI later, set `SMART_REPLY_OPENAI_API_KEY` (and optional `SMART_REPLY_OPENAI_MODEL`, `SMART_REPLY_OPENAI_BASE_URL`). The pipeline is already wired for the Responses API.
 
 ## Docker
 
