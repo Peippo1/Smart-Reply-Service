@@ -258,6 +258,21 @@ def test_no_comma_capital_could_and_metrics_deadline(client):
     # action-oriented draft should use plural-friendly deadline
     action_text = next(d["text"] for d in drafts if d["label"] == "Action-oriented")
     assert "need this by" not in action_text.lower()
+    assert "could you could you" not in " ".join(texts).lower()
+
+
+def test_preserve_q1_casing(client):
+    payload = {
+        "incoming_message": "Could you share the Q1 metrics?",
+        "channel": "email",
+        "tone": "professional",
+    }
+    resp = client.post("/v1/reply/draft", json=payload)
+    assert resp.status_code == 200
+    texts = [d["text"] for d in resp.json()["drafts"]]
+    assert all("Q1" in t for t in texts)
+    assert all(", Could you" not in t for t in texts)
+    assert "could you could you" not in " ".join(texts).lower()
 
 
 def test_uk_english_default_in_prompt():
