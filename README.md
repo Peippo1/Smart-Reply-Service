@@ -1,3 +1,11 @@
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+![Status](https://img.shields.io/badge/status-production--ready-success)
+
+*fastapi · python · api · microservice · ai · llm · nlp · developer-tools · saas · productivity*
+
 # ReplyCraft API
 
 ReplyCraft API is a production-ready FastAPI microservice that generates high-quality, channel-aware reply drafts for **Email**, **Slack**, and **LinkedIn**.
