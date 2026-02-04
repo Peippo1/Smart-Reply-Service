@@ -223,6 +223,41 @@ def test_context_reference_in_drafts(client):
     assert resp.status_code == 200
     texts = [d["text"].lower() for d in resp.json()["drafts"]]
     assert all("finance" in t for t in texts)
+    assert all("this is for this" not in t for t in texts)
+    assert all("(" not in t and ")" not in t for t in texts)
+    assert all(", could you" not in t for t in texts)
+
+
+def test_context_omitted_when_not_extractable(client):
+    payload = {
+        "incoming_message": "Can you review this?",
+        "context": "this",
+        "channel": "email",
+        "tone": "professional",
+    }
+    resp = client.post("/v1/reply/draft", json=payload)
+    assert resp.status_code == 200
+    texts = [d["text"].lower() for d in resp.json()["drafts"]]
+    assert all("this is for" not in t for t in texts)
+    assert all("(" not in t and ")" not in t for t in texts)
+    assert len(set(texts)) == 3
+
+
+def test_no_comma_capital_could_and_metrics_deadline(client):
+    payload = {
+        "incoming_message": "Can you share the latest metrics?",
+        "channel": "email",
+        "tone": "professional",
+    }
+    resp = client.post("/v1/reply/draft", json=payload)
+    assert resp.status_code == 200
+    drafts = resp.json()["drafts"]
+    texts = [d["text"] for d in drafts]
+    # ensure no ', Could you'
+    assert all(", Could you" not in t for t in texts)
+    # action-oriented draft should use plural-friendly deadline
+    action_text = next(d["text"] for d in drafts if d["label"] == "Action-oriented")
+    assert "need this by" not in action_text.lower()
 
 
 def test_uk_english_default_in_prompt():
