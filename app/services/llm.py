@@ -10,6 +10,7 @@ from app.api.schemas import Draft, DraftRequest, DraftResponse, Tone
 from app.core.config import get_settings
 from app.services.constraints import adjust_text_for_violations, check_constraints
 from app.services.formatting import apply_channel_format
+from app.services.generator import generate_base_drafts
 from app.services.prompts import SYSTEM_PROMPT, build_user_prompt
 
 logger = logging.getLogger(__name__)
@@ -20,13 +21,7 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
     Lightweight fallback when no OpenAI key is configured.
     Keeps the service usable in local/dev without external calls.
     """
-    base_text = request.incoming_message.strip()
-
-    flavours: list[tuple[str, str, str]] = [
-        ("Option 1", "Clear and concise response.", "concise"),
-        ("Option 2", "Warm and collaborative reply.", "friendly"),
-        ("Option 3", "Direct, action-focused note.", "assertive"),
-    ]
+    base_drafts = generate_base_drafts(request)
 
     def apply_constraints(text: str) -> tuple[str, bool]:
         constraints = request.constraints
@@ -57,8 +52,8 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
 
     emoji_enabled = bool(request.options and request.options.emoji)
 
-    for label, preface, tone in flavours:
-        text, constraint_changed = apply_constraints(f"{preface} {base_text}")
+    for draft in base_drafts:
+        text, constraint_changed = apply_constraints(draft.text)
         constraint_hits += int(constraint_changed)
         evaluation = check_constraints(text, request.constraints)
         if evaluation["violations"]:
@@ -69,7 +64,7 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
             request.channel, text, emoji_enabled=emoji_enabled
         )
         formatting_hits += formatting_score
-        drafts.append(Draft(label=label, text=formatted_text))
+        drafts.append(Draft(label=draft.label, text=formatted_text))
 
         all_constraints_satisfied.append(
             evaluation["within_max_words"] and evaluation["includes_question"] and evaluation["avoids_phrases"]
@@ -84,7 +79,7 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
         else:
             context_flags.append(True)
 
-    formatting_component = 0.25 if (formatting_hits / len(flavours)) > 0 else 0.0
+    formatting_component = 0.25 if (formatting_hits / len(base_drafts)) > 0 else 0.0
     tone_component = 0.25  # stub reports requested tone in metadata
     constraints_component = 0.25 if all(all_constraints_satisfied) else 0.0
     length_component = 0.15 if all(length_reasonable_flags) else 0.0
