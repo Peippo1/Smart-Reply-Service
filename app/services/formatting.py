@@ -8,6 +8,17 @@ from textwrap import shorten
 from app.api.schemas import Channel
 
 
+def normalize_terminal_punctuation(text: str) -> str:
+    """
+    Prevent trailing double punctuation like '?.', '!.' or '..'.
+    If text already ends with . ? ! leave it; otherwise append '.'.
+    """
+    stripped = text.rstrip()
+    if stripped.endswith((".", "?", "!")):
+        return stripped
+    return f"{stripped}."
+
+
 def _ensure_email_greeting(text: str) -> tuple[str, bool]:
     if re.match(r"^(hi|hello|dear)\b", text.strip(), re.IGNORECASE):
         return text, False
@@ -19,7 +30,8 @@ def _ensure_email_signoff(text: str) -> tuple[str, bool]:
     if re.search(r"(regards|cheers|sincerely|thanks)[,.]?\s*$", text.strip(), re.IGNORECASE):
         return text, False
     signoff = "Best regards,\nTim"
-    return f"{text.rstrip()}.\n\n{signoff}", True
+    base = normalize_terminal_punctuation(text.rstrip())
+    return f"{base}\n\n{signoff}", True
 
 
 def _ensure_blank_lines(text: str) -> tuple[str, bool]:
@@ -57,18 +69,27 @@ def _add_emojis(text: str) -> tuple[str, bool]:
 
 
 def _split_linkedin_paras(text: str) -> tuple[str, bool]:
-    words = text.split()
-    if len(words) <= 80:
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    if not sentences:
         return text, False
-    chunk_size = max(len(words) // 2, 40)
-    parts = [" ".join(words[:chunk_size]), " ".join(words[chunk_size:])]
-    return "\n\n".join(parts), True
+    chunks = []
+    current = []
+    for sent in sentences:
+        current.append(sent)
+        if len(" ".join(current).split()) >= 50 and len(chunks) < 2:
+            chunks.append(" ".join(current))
+            current = []
+    if current:
+        chunks.append(" ".join(current))
+    if len(chunks) <= 1:
+        return text, False
+    return "\n\n".join(chunks[:3]), True
 
 
 def _ensure_linkedin_cta(text: str) -> tuple[str, bool]:
     if re.search(r"(chat|talk|connect|let me know)", text, re.IGNORECASE):
         return text, False
-    cta = "If you’re open to it, happy to chat."
+    cta = "If you’re open to it, happy to connect and compare notes."
     return f"{text.rstrip()} {cta}", True
 
 
@@ -84,6 +105,7 @@ def apply_channel_format(channel: Channel, text: str, emoji_enabled: bool = Fals
         applied += changed
         text, changed = _ensure_email_signoff(text)
         applied += changed
+        text = normalize_terminal_punctuation(text)
         return text, applied / 3
 
     if channel == "slack":

@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import uuid
 from textwrap import shorten
 from typing import Iterable
 
@@ -93,7 +94,7 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
         "Applied channel formatting; enforced constraints."
     return DraftResponse(
         drafts=drafts,
-        request_id="stub",
+        request_id=uuid.uuid4().hex[:8],
         detected_tone="neutral-professional",
         channel_applied=request.channel,
         notes=notes,
