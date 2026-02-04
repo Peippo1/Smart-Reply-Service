@@ -80,16 +80,18 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
         else:
             context_flags.append(True)
 
-    formatting_component = 0.25 if (formatting_hits / len(base_drafts)) > 0 else 0.0
-    tone_component = 0.25  # stub reports requested tone in metadata
-    constraints_component = 0.25 if all(all_constraints_satisfied) else 0.0
-    length_component = 0.15 if all(length_reasonable_flags) else 0.0
-    context_component = 0.10 if all(context_flags) else 0.0
+    baseline = 0.70
+    formatting_component = 0.10 if (formatting_hits / len(base_drafts)) > 0 else 0.0
+    constraints_component = 0.10 if (request.constraints and all(all_constraints_satisfied)) else 0.0
+    length_component = 0.05 if all(length_reasonable_flags) else 0.0
+    context_component = 0.05 if (request.context and all(context_flags)) else 0.0
 
-    confidence = round(
-        min(1.0, formatting_component + tone_component + constraints_component + length_component + context_component),
-        2,
-    )
+    confidence_raw = baseline + formatting_component + constraints_component + length_component + context_component
+
+    if request.constraints and all(all_constraints_satisfied) and request.context and all(context_flags):
+        confidence = min(1.0, round(confidence_raw, 2))
+    else:
+        confidence = min(0.95, round(confidence_raw, 2))
     notes = "Applied channel formatting; enforced constraints; context referenced." if request.context else \
         "Applied channel formatting; enforced constraints."
     return DraftResponse(

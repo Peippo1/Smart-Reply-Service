@@ -42,6 +42,7 @@ def test_draft_endpoint_returns_three_drafts(client):
     assert data["channel_applied"] == "email"
     assert data["request_id"] != "stub"
     assert len(data["request_id"]) == 8
+    assert data["confidence_score"] <= 0.85
 
 
 def test_auth_required_when_api_key_configured(monkeypatch, client):
@@ -190,3 +191,17 @@ def test_generate_reply_drafts_uses_openai_and_returns_valid(monkeypatch):
     # Ensure system prompt is sent first
     assert captured["input"][0]["content"] == SYSTEM_PROMPT
     assert captured["response_format"]["type"] == "json_object"
+
+
+def test_confidence_high_with_constraints_and_context(client):
+    payload = {
+        "incoming_message": "Can you share the latest metrics for Q1?",
+        "context": "Finance review thread",
+        "channel": "email",
+        "tone": "professional",
+        "constraints": {"max_words": 100, "must_include_question": True},
+    }
+    resp = client.post("/v1/reply/draft", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["confidence_score"] > 0.90
