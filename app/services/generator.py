@@ -3,6 +3,7 @@ Base draft generator interface (stub). Intended to be swapped with an LLM-backed
 """
 
 from app.api.schemas import Draft, DraftRequest
+import re
 
 
 def _context_keyword(context: str | None) -> str | None:
@@ -37,6 +38,19 @@ def _extract_phrase(context: str | None) -> str | None:
     return lowered
 
 
+def _clean_phrasing(text: str) -> str:
+    """
+    Tidy common phrasing issues:
+    - ', Could you' -> ', could you'
+    - mid-sentence 'Could you' -> 'could you'
+    - duplicate 'could you could you' -> single
+    """
+    cleaned = re.sub(r",\s+Could you", ", could you", text)
+    cleaned = re.sub(r"(?<!^)(?<!\n\n)Could you", "could you", cleaned)
+    cleaned = re.sub(r"\bcould you\b\s+\bcould you\b", "could you", cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
 def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     """
     Produce three simple drafts based on the incoming request.
@@ -57,9 +71,9 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     else:  # email or other
         direct = f"{base}" if not phrase else f"Given this is for {phrase}, {base}"
         friendly = (
-            f"When you have a moment, could you {base.lower()}"
+            f"When you have a moment, could you {base}"
             if not phrase
-            else f"When you have a moment—since this is for {phrase}—could you {base.lower()}"
+            else f"When you have a moment—since this is for {phrase}—could you {base}"
         )
         if "metrics" in base.lower() or "reports" in base.lower() or "figures" in base.lower():
             deadline_q = "When do you need them by?"
@@ -68,8 +82,8 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
         action = f"{base} {deadline_q}" if not phrase else f"Given this is for {phrase}, {base} {deadline_q}"
 
     drafts = [
-        Draft(label="Direct", text=direct),
-        Draft(label="Friendly", text=friendly),
-        Draft(label="Action-oriented", text=action),
+        Draft(label="Direct", text=_clean_phrasing(direct)),
+        Draft(label="Friendly", text=_clean_phrasing(friendly)),
+        Draft(label="Action-oriented", text=_clean_phrasing(action)),
     ]
     return drafts
