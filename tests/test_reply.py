@@ -43,6 +43,11 @@ def test_draft_endpoint_returns_three_drafts(client):
     assert data["request_id"] != "stub"
     assert len(data["request_id"]) == 8
     assert data["confidence_score"] <= 0.85
+    labels = [d["label"] for d in data["drafts"]]
+    assert labels == ["Direct", "Friendly", "Action-oriented"]
+    texts = [d["text"] for d in data["drafts"]]
+    assert all("Quick summary:" not in t and "Friendly take:" not in t and "Action-oriented:" not in t for t in texts)
+    assert len(set(texts)) == 3
 
 
 def test_auth_required_when_api_key_configured(monkeypatch, client):
