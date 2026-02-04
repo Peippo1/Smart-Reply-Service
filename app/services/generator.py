@@ -5,26 +5,42 @@ Base draft generator interface (stub). Intended to be swapped with an LLM-backed
 from app.api.schemas import Draft, DraftRequest
 
 
+def _context_keyword(context: str | None) -> str | None:
+    if not context:
+        return None
+    tokens = context.split()
+    for tok in tokens:
+        cleaned = tok.strip(",.!?").lower()
+        if cleaned:
+            return cleaned
+    return None
+
+
 def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     """
     Produce three simple drafts based on the incoming request.
     Currently stubbed; replace with LLM outputs later.
     """
     base = request.incoming_message.strip()
-    context_snippet = f" ({request.context})" if request.context else ""
+    keyword = _context_keyword(request.context)
+    def with_context(prefix: str) -> str:
+        if not keyword:
+            return ""
+        return f"{prefix} {keyword} context, "
 
     if request.channel == "slack":
-        direct = f"{base}"
-        friendly = f"Hey team, {base}{context_snippet} Appreciate it!"
-        action = f"{base}{context_snippet} Can we align on next steps today?"
+        direct = f"{with_context('With the')}{base}"
+        friendly = f"Hey team, {with_context('since it\'s about the').strip()} {base} Appreciate it!"
+        action = f"{with_context('Given the')} {base} Can we align on next steps today?"
     elif request.channel == "linkedin":
-        direct = f"{base}"
-        friendly = f"Appreciate you raising this{context_snippet}. {base}"
-        action = f"{base}{context_snippet} Would you be open to a quick chat to align next steps?"
+        direct = f"Since you're working on {keyword}," if keyword else base
+        direct = f"{direct} {base}" if keyword else direct
+        friendly = f"Appreciate the perspective on {keyword}, {base}" if keyword else f"Appreciate the perspective. {base}"
+        action = f"{base} If you’re open to it, happy to connect and compare notes on {keyword or 'this'}."
     else:  # email or other
-        direct = f"{base}"
-        friendly = f"Thanks for flagging this{context_snippet}. {base}"
-        action = f"{base}{context_snippet} Please confirm the next steps or timeline."
+        direct = f"{with_context('Given the')}{base}"
+        friendly = f"Thanks for flagging this{f' in {keyword}' if keyword else ''}. {base}"
+        action = f"{with_context('Considering the')}{base} Please confirm the next steps or timeline."
 
     drafts = [
         Draft(label="Direct", text=direct),

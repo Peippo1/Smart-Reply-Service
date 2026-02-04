@@ -212,6 +212,19 @@ def test_confidence_high_with_constraints_and_context(client):
     assert data["confidence_score"] > 0.90
 
 
+def test_context_reference_in_drafts(client):
+    payload = {
+        "incoming_message": "Can you share the latest metrics?",
+        "context": "finance leadership review",
+        "channel": "email",
+        "tone": "professional",
+    }
+    resp = client.post("/v1/reply/draft", json=payload)
+    assert resp.status_code == 200
+    texts = [d["text"].lower() for d in resp.json()["drafts"]]
+    assert all("finance" in t for t in texts)
+
+
 def test_uk_english_default_in_prompt():
     req = DraftRequest(incoming_message="Hello", channel="email", tone="friendly")
     prompt = build_user_prompt(req)
