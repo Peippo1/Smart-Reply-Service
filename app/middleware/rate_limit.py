@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from functools import lru_cache
 from typing import Callable
 
 from fastapi import HTTPException, Request, status
@@ -29,12 +30,21 @@ class SimpleRateLimiter:
         self.hits[key].append(now)
 
 
-def rate_limit_dependency() -> Callable[[Request], None]:
-    limiter = SimpleRateLimiter(get_settings().rate_limit_per_minute)
+@lru_cache(maxsize=1)
+def _get_limiter() -> SimpleRateLimiter:
+    return SimpleRateLimiter(get_settings().rate_limit_per_minute)
 
-    async def _limit(request: Request) -> None:
-        client_id = request.client.host if request.client else "unknown"
-        limiter.check(client_id)
 
-    return _limit
+async def rate_limit_dependency(request: Request) -> None:
+    """
+    Dependency that enforces a per-IP rate limit using an in-memory window.
+    """
+    client_id = request.client.host if request.client else "unknown"
+    _get_limiter().check(client_id)
 
+
+def reset_rate_limit_cache() -> None:
+    """
+    Clear cached limiter; useful in tests when rate limit env changes.
+    """
+    _get_limiter.cache_clear()

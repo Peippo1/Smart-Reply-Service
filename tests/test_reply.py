@@ -3,6 +3,7 @@ import pytest
 
 from app.main import create_app
 from app.core.config import reset_settings_cache
+from app.middleware.rate_limit import reset_rate_limit_cache
 
 
 @pytest.fixture()
@@ -11,6 +12,7 @@ def client(monkeypatch):
     Build a fresh app/client per test so env changes (API key) apply.
     """
     reset_settings_cache()
+    reset_rate_limit_cache()
     return TestClient(create_app())
 
 
@@ -59,3 +61,19 @@ def test_auth_skipped_when_api_key_not_set(monkeypatch, client):
     response = client.post("/v1/reply/draft", json=payload)
     assert response.status_code == 200
     assert len(response.json()["drafts"]) == 3
+
+
+def test_rate_limit_returns_429(monkeypatch):
+    # Tighten limit to 1 request/min for test predictability.
+    monkeypatch.setenv("SMART_REPLY_RATE_LIMIT_PER_MINUTE", "1")
+    reset_settings_cache()
+    reset_rate_limit_cache()
+    local_client = TestClient(create_app())
+
+    payload = {"message": "Ping?", "channel": "email", "tone": "professional"}
+    first = local_client.post("/v1/reply/draft", json=payload)
+    assert first.status_code == 200
+
+    second = local_client.post("/v1/reply/draft", json=payload)
+    assert second.status_code == 429
+    assert second.json()["detail"] == "Rate limit exceeded."

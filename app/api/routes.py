@@ -19,6 +19,6 @@ async def health() -> HealthResponse:
     dependencies=[Depends(verify_api_key)],
 )
 async def create_reply_draft(
-    request: DraftRequest, rate_limit=Depends(rate_limit_dependency())
+    request: DraftRequest, rate_limit=Depends(rate_limit_dependency)
 ) -> DraftResponse:
     return generate_reply_drafts(request)
