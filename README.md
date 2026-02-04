@@ -1,8 +1,8 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
-![Status](https://img.shields.io/badge/status-production--ready-success)
+![License](https://img.shields.io/github/license/<OWNER>/<REPO>)
+![CI](https://img.shields.io/badge/CI-local%20tests%20passing-brightgreen)
+![Demo](https://img.shields.io/badge/demo-not%20deployed-lightgrey)
 
 *fastapi · python · api · microservice · ai · llm · nlp · developer-tools · saas · productivity*
 
