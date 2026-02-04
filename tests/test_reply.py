@@ -31,7 +31,7 @@ def test_health(client):
 
 def test_draft_endpoint_returns_three_drafts(client):
     payload = {
-        "message": "Can you share the latest metrics for Q1?",
+        "incoming_message": "Can you share the latest metrics for Q1?",
         "channel": "email",
         "tone": "professional",
     }
@@ -39,7 +39,7 @@ def test_draft_endpoint_returns_three_drafts(client):
     assert response.status_code == 200
     data = response.json()
     assert len(data["drafts"]) == 3
-    assert data["requested_tone"] == "professional"
+    assert data["channel_applied"] == "email"
 
 
 def test_auth_required_when_api_key_configured(monkeypatch, client):
@@ -47,7 +47,7 @@ def test_auth_required_when_api_key_configured(monkeypatch, client):
     reset_settings_cache()
 
     payload = {
-        "message": "Ping?",
+        "incoming_message": "Ping?",
         "channel": "email",
         "tone": "professional",
     }
@@ -61,7 +61,7 @@ def test_auth_skipped_when_api_key_not_set(monkeypatch, client):
     reset_settings_cache()
 
     payload = {
-        "message": "Ping?",
+        "incoming_message": "Ping?",
         "channel": "email",
         "tone": "professional",
     }
@@ -76,7 +76,7 @@ def test_auth_succeeds_with_valid_key(monkeypatch):
     reset_rate_limit_cache()
     authed_client = TestClient(create_app())
 
-    payload = {"message": "Hi", "channel": "email", "tone": "professional"}
+    payload = {"incoming_message": "Hi", "channel": "email", "tone": "professional"}
     response = authed_client.post("/v1/reply/draft", json=payload, headers={"x-api-key": "secret"})
     assert response.status_code == 200
 
@@ -88,7 +88,7 @@ def test_rate_limit_returns_429(monkeypatch):
     reset_rate_limit_cache()
     local_client = TestClient(create_app())
 
-    payload = {"message": "Ping?", "channel": "email", "tone": "professional"}
+    payload = {"incoming_message": "Ping?", "channel": "email", "tone": "professional"}
     first = local_client.post("/v1/reply/draft", json=payload)
     assert first.status_code == 200
 
@@ -98,18 +98,18 @@ def test_rate_limit_returns_429(monkeypatch):
 
 
 def test_schema_validation_rejects_bad_tone(client):
-    payload = {"message": "Hi", "channel": "email", "tone": "not-a-tone"}
+    payload = {"incoming_message": "Hi", "channel": "email", "tone": "not-a-tone"}
     response = client.post("/v1/reply/draft", json=payload)
     assert response.status_code == 422
 
 
 def test_build_user_prompt_is_deterministic():
     request = DraftRequest(
-        message="Hello there",
+        incoming_message="Hello there",
         context="Thread with ops",
         channel="email",
         tone="friendly",
-        constraints={"word_limit": 50, "must_include_question": True, "avoid_phrases": ["ASAP", "FYI"]},
+        constraints={"max_words": 50, "must_include_question": True, "avoid_phrases": ["ASAP", "FYI"]},
     )
     prompt = build_user_prompt(request)
 
@@ -121,7 +121,7 @@ def test_build_user_prompt_is_deterministic():
         "- message: Hello there\n"
         "- context: Thread with ops\n"
         "- constraints:\n"
-        "- word_limit: 50\n"
+        "- max_words: 50\n"
         "- must_include_question: true\n"
         "- avoid_phrases: ['ASAP', 'FYI']"
     )
@@ -146,17 +146,16 @@ def test_generate_reply_drafts_uses_openai_and_returns_valid(monkeypatch):
                 id = "resp_123"
                 output_text = json.dumps(
                     {
+                        "request_id": "resp_123",
+                        "detected_tone": "professional",
+                        "channel_applied": "email",
                         "drafts": [
-                            {
-                                "text": "Draft one",
-                                "tone_label": "professional",
-                                "rationale": "Reason",
-                                "confidence": 0.9,
-                            }
+                            {"label": "Option 1", "text": "Draft one"},
+                            {"label": "Option 2", "text": "Draft two"},
+                            {"label": "Option 3", "text": "Draft three"},
                         ],
-                        "channel": "email",
-                        "requested_tone": "professional",
-                        "evidence": "unit-test",
+                        "notes": "unit-test",
+                        "confidence_score": 0.9,
                     }
                 )
 
@@ -170,7 +169,7 @@ def test_generate_reply_drafts_uses_openai_and_returns_valid(monkeypatch):
     fake_module = types.SimpleNamespace(OpenAI=FakeOpenAI)
     monkeypatch.setitem(sys.modules, "openai", fake_module)
 
-    request = DraftRequest(message="Test msg", channel="email", tone="professional")
+    request = DraftRequest(incoming_message="Test msg", channel="email", tone="professional")
     result = generate_reply_drafts(request)
 
     assert result.drafts[0].text == "Draft one"

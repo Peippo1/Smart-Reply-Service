@@ -6,7 +6,7 @@ from typing import Iterable
 
 from pydantic import ValidationError
 
-from app.api.schemas import DraftCandidate, DraftRequest, DraftResponse, Tone
+from app.api.schemas import Draft, DraftRequest, DraftResponse, Tone
 from app.core.config import get_settings
 from app.services.prompts import SYSTEM_PROMPT, build_user_prompt
 
@@ -19,11 +19,11 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
     Keeps the service usable in local/dev without external calls.
     """
     base_text = (
-        f"Thanks for reaching out. {request.message.strip()} "
+        f"Thanks for reaching out. {request.incoming_message.strip()} "
         f"{request.context or ''}".strip()
     )
 
-    flavours: list[tuple[str, Tone]] = [
+    flavours: list[tuple[str, str]] = [
         ("Here is a polished reply that keeps things clear.", request.tone),
         ("A warmer, more personable take.", "friendly"),
         ("A crisp version that gets straight to the point.", "concise"),
@@ -45,21 +45,21 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
         return result
 
     drafts: list[DraftCandidate] = []
-    for preface, tone in flavours:
+    for idx, (preface, tone) in enumerate(flavours):
         text = apply_constraints(f"{preface} {base_text}")
         drafts.append(
-            DraftCandidate(
+            Draft(
+                label=f"Option {idx + 1}",
                 text=text,
-                tone_label=tone,
-                rationale=f"Aligned to {tone} tone for {request.channel}.",
-                confidence=0.75,
             )
         )
     return DraftResponse(
         drafts=drafts,
-        channel=request.channel,
-        requested_tone=request.tone,
-        evidence="Stub generator used (no OpenAI key).",
+        request_id="stub",
+        detected_tone=request.tone,
+        channel_applied=request.channel,
+        notes="Stub generator used (no OpenAI key).",
+        confidence_score=0.75,
     )
 
 
