@@ -4,6 +4,7 @@ Channel-aware formatting utilities for draft replies.
 
 import re
 from textwrap import shorten
+import random
 
 from app.api.schemas import Channel
 
@@ -61,10 +62,15 @@ def _bullets_from_sentences(text: str) -> tuple[str, bool]:
     return bullets, True
 
 
-def _add_emojis(text: str) -> tuple[str, bool]:
-    if any(ch in text for ch in "😀🙂👍🙏🤝✨🎯✅"):
+def _add_emojis(text: str, rng: random.Random | None = None) -> tuple[str, bool]:
+    rng = rng or random
+    emoji_pool = ["🙂", "👍", "✅", "🙏"]
+    if any(ch in text for ch in emoji_pool):
         return text, False
-    additions = ["🙂", "👍"]
+    count = rng.randint(0, 2)
+    if count == 0:
+        return text, False
+    additions = rng.choices(emoji_pool, k=count)
     return f"{text} {' '.join(additions)}", True
 
 
@@ -93,7 +99,7 @@ def _ensure_linkedin_cta(text: str) -> tuple[str, bool]:
     return f"{text.rstrip()} {cta}", True
 
 
-def apply_channel_format(channel: Channel, text: str, emoji_enabled: bool = False) -> tuple[str, float]:
+def apply_channel_format(channel: Channel, text: str, emoji_enabled: bool = False, rng: random.Random | None = None) -> tuple[str, float]:
     """
     Apply channel-specific formatting rules. Returns (formatted_text, formatting_score 0-1).
     """
@@ -114,7 +120,7 @@ def apply_channel_format(channel: Channel, text: str, emoji_enabled: bool = Fals
         text, trunc = _truncate_slack(text)
         applied += trunc
         if emoji_enabled:
-            text, emoji_added = _add_emojis(text)
+            text, emoji_added = _add_emojis(text, rng=rng)
             applied += emoji_added
         return text, applied / 3
 
