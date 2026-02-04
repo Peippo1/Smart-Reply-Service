@@ -60,6 +60,7 @@ def check_constraints(text: str, constraints: Optional[Constraints]) -> dict:
 def adjust_text_for_violations(text: str, constraints: Optional[Constraints]) -> str:
     """
     Apply a single pass of gentle adjustments to address violations.
+    Keeps edits minimal to preserve the author’s voice.
     """
     if not constraints:
         return text

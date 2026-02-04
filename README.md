@@ -66,9 +66,9 @@ Response shape:
   "detected_tone": "neutral-professional",
   "channel_applied": "email",
   "drafts": [
-    {"label": "Option 1", "text": "..." },
-    {"label": "Option 2", "text": "..." },
-    {"label": "Option 3", "text": "..." }
+    {"label": "Direct", "text": "..." },
+    {"label": "Friendly", "text": "..." },
+    {"label": "Action-oriented", "text": "..." }
   ],
   "notes": "Applied channel formatting; enforced constraints.",
   "confidence_score": 0.0

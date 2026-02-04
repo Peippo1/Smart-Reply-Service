@@ -32,6 +32,7 @@ async def health() -> HealthResponse:
 async def create_reply_draft(
     request: DraftRequest, rate_limit=Depends(rate_limit_dependency)
 ) -> DraftResponse:
+    # Dependency order ensures auth and rate-limit are applied before draft generation.
     response = generate_reply_drafts(request)
     logger.info(
         "drafts.generated",

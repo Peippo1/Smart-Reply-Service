@@ -6,6 +6,9 @@ from app.api.schemas import Draft, DraftRequest
 
 
 def _context_keyword(context: str | None) -> str | None:
+    """
+    Extract a simple keyword from context to subtly ground drafts without copying verbatim.
+    """
     if not context:
         return None
     tokens = context.split()
@@ -20,6 +23,7 @@ def generate_base_drafts(request: DraftRequest) -> list[Draft]:
     """
     Produce three simple drafts based on the incoming request.
     Currently stubbed; replace with LLM outputs later.
+    Drafts differ by voice (Direct/Friendly/Action-oriented) and lightly weave in context.
     """
     base = request.incoming_message.strip()
     keyword = _context_keyword(request.context)

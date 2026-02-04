@@ -21,6 +21,7 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
     """
     Lightweight fallback when no OpenAI key is configured.
     Keeps the service usable in local/dev without external calls.
+    Includes constraint enforcement + channel formatting to mimic production behaviour.
     """
     base_drafts = generate_base_drafts(request)
 
