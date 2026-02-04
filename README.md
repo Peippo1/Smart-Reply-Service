@@ -1,6 +1,19 @@
-# Smart Reply Service
+# ReplyCraft API
 
-FastAPI microservice that generates three channel-appropriate reply drafts with tone labels and simple confidence heuristics.
+ReplyCraft API is a production-ready FastAPI microservice that generates high-quality, channel-aware reply drafts for **Email**, **Slack**, and **LinkedIn**.
+
+Unlike generic rewrite APIs, ReplyCraft applies channel-specific formatting, tone control, and context-aware phrasing to produce replies that feel natural and appropriate to where they’ll be sent.
+
+## Why ReplyCraft?
+
+Most text-rewrite APIs treat all messages the same. ReplyCraft doesn’t.
+
+ReplyCraft generates replies that respect **where** the message will be sent:
+- **Email** → greeting, paragraphs, sign-off
+- **Slack** → short, scannable, optional emoji
+- **LinkedIn** → lighter tone, short paragraphs, soft call-to-action
+
+Each request returns three distinct drafts (Direct, Friendly, Action-oriented) with transparent confidence scoring, making outputs predictable and easy to integrate into real products.
 
 ## Quickstart
 
@@ -11,7 +24,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Visit `http://localhost:8000/docs` for interactive API docs (public by default; consider restricting in prod).
+Visit http://localhost:8000/health to verify the service is running,  
+then open http://localhost:8000/docs for interactive API documentation.
 
 ### Example requests
 
@@ -20,6 +34,19 @@ Email:
 curl -X POST http://localhost:8000/v1/reply/draft \
   -H "Content-Type: application/json" \
   -d '{"incoming_message":"Could you share the Q1 metrics?","channel":"email","tone":"professional"}'
+```
+
+Example response (trimmed):
+```json
+{
+  "drafts": [
+    {
+      "label": "Direct",
+      "text": "Hi there,\n\nGiven this is for finance leadership, could you share the Q1 metrics?\n\nBest regards,\nTim"
+    }
+  ],
+  "confidence_score": 0.85
+}
 ```
 
 Slack:
@@ -39,7 +66,9 @@ curl -X POST http://localhost:8000/v1/reply/draft \
 ## Endpoints
 
 - `GET /health` — basic liveness probe.
-- `POST /v1/reply/draft` — generate three reply drafts with channel-aware formatting, constraint enforcement, and confidence scoring. Example body:
+- `POST /v1/reply/draft` — generate three channel-aware reply drafts (Direct, Friendly, Action-oriented) with constraint enforcement and confidence scoring.
+
+Example body:
 
 ```json
 {
@@ -79,8 +108,20 @@ Response shape:
 - API key is optional; set `SMART_REPLY_API_KEY` to require `x-api-key`.
 - Rate limit defaults to 60 req/min per IP; override with `SMART_REPLY_RATE_LIMIT_PER_MINUTE`.
 
+Designed for safe public deployment and API marketplaces such as RapidAPI.
+
 ### OpenAI integration (future-ready)
-- Stub drafts are generated locally. To switch to OpenAI later, set `SMART_REPLY_OPENAI_API_KEY` (and optional `SMART_REPLY_OPENAI_MODEL`, `SMART_REPLY_OPENAI_BASE_URL`). The pipeline is already wired for the Responses API.
+ReplyCraft currently generates deterministic drafts locally for zero-cost operation and testability.
+
+The pipeline is already wired for OpenAI’s Responses API — enabling higher-quality generation later without changing request/response contracts or business logic.
+
+## Example use cases
+
+- Productivity tools and browser extensions
+- Slack or email assistants
+- CRM and customer support workflows
+- Internal company communication tools
+- Job-seeker and professional networking tools
 
 ## Docker
 
