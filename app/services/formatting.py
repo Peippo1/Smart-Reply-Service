@@ -21,6 +21,7 @@ def normalize_terminal_punctuation(text: str) -> str:
 
 
 def _ensure_email_greeting(text: str) -> tuple[str, bool]:
+    # If the draft already starts with a greeting, leave it; otherwise prepend a neutral greeting.
     if re.match(r"^(hi|hello|dear)\b", text.strip(), re.IGNORECASE):
         return text, False
     greeting = "Hi there,"
@@ -28,6 +29,7 @@ def _ensure_email_greeting(text: str) -> tuple[str, bool]:
 
 
 def _ensure_email_signoff(text: str) -> tuple[str, bool]:
+    # Add a UK-English friendly sign-off if none exists.
     if re.search(r"(regards|cheers|sincerely|thanks)[,.]?\s*$", text.strip(), re.IGNORECASE):
         return text, False
     signoff = "Best regards,\nTim"
@@ -55,6 +57,7 @@ def _truncate_slack(text: str) -> tuple[str, bool]:
 
 
 def _bullets_from_sentences(text: str) -> tuple[str, bool]:
+    # For Slack, convert multiple sentences into bullets to improve scannability.
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
     if len(sentences) < 2:
         return text, False
@@ -63,6 +66,7 @@ def _bullets_from_sentences(text: str) -> tuple[str, bool]:
 
 
 def _add_emojis(text: str, rng: random.Random | None = None) -> tuple[str, bool]:
+    # Light-touch emoji sprinkle (0-2) only when requested and none already present.
     rng = rng or random
     emoji_pool = ["🙂", "👍", "✅", "🙏"]
     if any(ch in text for ch in emoji_pool):
