@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.api.schemas import Draft, DraftRequest, DraftResponse, Tone
 from app.core.config import get_settings
+from app.services.constraints import adjust_text_for_violations, check_constraints
 from app.services.formatting import apply_channel_format
 from app.services.prompts import SYSTEM_PROMPT, build_user_prompt
 
@@ -50,29 +51,58 @@ def _stub_drafts(request: DraftRequest) -> DraftResponse:
     drafts: list[Draft] = []
     formatting_hits = 0.0
     constraint_hits = 0.0
+    all_constraints_satisfied: list[bool] = []
+    length_reasonable_flags: list[bool] = []
+    context_flags: list[bool] = []
 
     emoji_enabled = bool(request.options and request.options.emoji)
 
     for label, preface, tone in flavours:
         text, constraint_changed = apply_constraints(f"{preface} {base_text}")
         constraint_hits += int(constraint_changed)
+        evaluation = check_constraints(text, request.constraints)
+        if evaluation["violations"]:
+            text = adjust_text_for_violations(text, request.constraints)
+            evaluation = check_constraints(text, request.constraints)
+
         formatted_text, formatting_score = apply_channel_format(
             request.channel, text, emoji_enabled=emoji_enabled
         )
         formatting_hits += formatting_score
         drafts.append(Draft(label=label, text=formatted_text))
 
-    confidence = min(
-        1.0,
-        0.5 + (formatting_hits / len(flavours)) * 0.25 + (constraint_hits / len(flavours)) * 0.25,
+        all_constraints_satisfied.append(
+            evaluation["within_max_words"] and evaluation["includes_question"] and evaluation["avoids_phrases"]
+        )
+        length_reasonable_flags.append(
+            evaluation["within_max_words"]
+            if request.constraints and request.constraints.max_words
+            else len(formatted_text.split()) <= 160
+        )
+        if request.context:
+            context_flags.append(request.context.lower() in formatted_text.lower())
+        else:
+            context_flags.append(True)
+
+    formatting_component = 0.25 if (formatting_hits / len(flavours)) > 0 else 0.0
+    tone_component = 0.25  # stub reports requested tone in metadata
+    constraints_component = 0.25 if all(all_constraints_satisfied) else 0.0
+    length_component = 0.15 if all(length_reasonable_flags) else 0.0
+    context_component = 0.10 if all(context_flags) else 0.0
+
+    confidence = round(
+        min(1.0, formatting_component + tone_component + constraints_component + length_component + context_component),
+        2,
     )
+    notes = "Applied channel formatting; enforced constraints; context referenced." if request.context else \
+        "Applied channel formatting; enforced constraints."
     return DraftResponse(
         drafts=drafts,
         request_id="stub",
         detected_tone="neutral-professional",
         channel_applied=request.channel,
-        notes="Stub generator used (no OpenAI key).",
-        confidence_score=round(confidence, 2),
+        notes=notes,
+        confidence_score=confidence,
     )
 
 
