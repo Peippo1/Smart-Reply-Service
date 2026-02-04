@@ -40,6 +40,8 @@ def test_draft_endpoint_returns_three_drafts(client):
     data = response.json()
     assert len(data["drafts"]) == 3
     assert data["channel_applied"] == "email"
+    assert data["request_id"] != "stub"
+    assert len(data["request_id"]) == 8
 
 
 def test_auth_required_when_api_key_configured(monkeypatch, client):
