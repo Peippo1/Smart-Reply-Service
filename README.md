@@ -2,7 +2,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal)
 ![License](https://img.shields.io/github/license/<OWNER>/<REPO>)
 ![CI](https://img.shields.io/badge/CI-local%20tests%20passing-brightgreen)
-![Demo](https://img.shields.io/badge/demo-not%20deployed-lightgrey)
+![Health Check](https://img.shields.io/badge/health-checks%20passing-brightgreen)
 
 *fastapi · python · api · microservice · ai · llm · nlp · developer-tools · saas · productivity*
 
@@ -111,6 +111,21 @@ Response shape:
   "confidence_score": 0.0
 }
 ```
+
+## Health monitoring (RapidAPI)
+
+ReplyCraft includes an external health check configured via **RapidAPI Testing**.
+
+The `/health` endpoint is monitored on a scheduled basis (every 6 hours on the free plan) to ensure the deployed service remains available and returns the expected response shape.
+
+The health check validates:
+- HTTP status code (`200`)
+- Service identifier (`smart-reply-service`)
+- Application status (`ok`)
+
+This provides lightweight uptime assurance without introducing additional infrastructure or vendor lock‑in.
+
+![RapidAPI health check success](docs/rapidapi-health-check.png)
 
 ### Auth & rate limiting
 - API key is optional; set `SMART_REPLY_API_KEY` to require `x-api-key`.
