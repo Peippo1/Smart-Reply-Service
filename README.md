@@ -1,6 +1,6 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal)
-![License](https://img.shields.io/github/license/<OWNER>/<REPO>)
+![License](https://img.shields.io/github/license/Peippo1/smart-reply-service)
 ![CI](https://img.shields.io/badge/CI-local%20tests%20passing-brightgreen)
 ![Health Check](https://img.shields.io/badge/health-checks%20passing-brightgreen)
 
@@ -152,3 +152,8 @@ The pipeline is already wired for OpenAI’s Responses API — enabling higher-q
 docker build -t smart-reply-service .
 docker run -p 8000:8000 smart-reply-service
 ```
+
+## License
+
+This project is licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for full details.
