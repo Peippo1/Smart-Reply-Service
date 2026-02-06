@@ -136,6 +136,17 @@ This provides lightweight uptime assurance without introducing additional infras
 
 Designed for safe public deployment and API marketplaces such as RapidAPI.
 
+### Deployment & security model
+
+ReplyCraft is designed for safe public deployment on API marketplaces.
+
+- **Cloud Run access:** Public (no IAM required)
+- **Request authorization:** Enforced at the application layer using an `x-api-key`
+- **Marketplace controls:** Subscription, quotas, and abuse protection handled by RapidAPI
+- **Secrets management:** API keys are injected at runtime via Google Secret Manager (never stored in the repo)
+
+This separation of concerns keeps infrastructure simple while ensuring that only authorized clients can generate billable or compute‑intensive work.
+
 ### OpenAI integration (future-ready)
 ReplyCraft currently generates deterministic drafts locally for zero-cost operation and testability.
 
