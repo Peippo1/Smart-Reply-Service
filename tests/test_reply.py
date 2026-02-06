@@ -18,9 +18,12 @@ def client(monkeypatch):
     """
     Build a fresh app/client per test so env changes (API key) apply.
     """
+    monkeypatch.setenv("API_KEY", "secret")
     reset_settings_cache()
     reset_rate_limit_cache()
-    return TestClient(create_app())
+    c = TestClient(create_app())
+    c.headers.update({"x-api-key": "secret"})
+    return c
 
 
 def test_health(client):
@@ -51,35 +54,37 @@ def test_draft_endpoint_returns_three_drafts(client):
 
 
 def test_auth_required_when_api_key_configured(monkeypatch, client):
-    monkeypatch.setenv("SMART_REPLY_API_KEY", "secret")
+    monkeypatch.setenv("API_KEY", "secret")
     reset_settings_cache()
+    local_client = TestClient(create_app())
 
     payload = {
         "incoming_message": "Ping?",
         "channel": "email",
         "tone": "professional",
     }
-    response = client.post("/v1/reply/draft", json=payload)
+    response = local_client.post("/v1/reply/draft", json=payload)
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid or missing API key."
+    assert response.json()["detail"] == "Invalid API key"
 
 
-def test_auth_skipped_when_api_key_not_set(monkeypatch, client):
-    monkeypatch.delenv("SMART_REPLY_API_KEY", raising=False)
+def test_auth_missing_env_returns_500(monkeypatch):
+    monkeypatch.delenv("API_KEY", raising=False)
     reset_settings_cache()
+    local_client = TestClient(create_app())
 
     payload = {
         "incoming_message": "Ping?",
         "channel": "email",
         "tone": "professional",
     }
-    response = client.post("/v1/reply/draft", json=payload)
-    assert response.status_code == 200
-    assert len(response.json()["drafts"]) == 3
+    response = local_client.post("/v1/reply/draft", json=payload)
+    assert response.status_code == 500
+    assert response.json()["detail"] == "API key not configured"
 
 
 def test_auth_succeeds_with_valid_key(monkeypatch):
-    monkeypatch.setenv("SMART_REPLY_API_KEY", "secret")
+    monkeypatch.setenv("API_KEY", "secret")
     reset_settings_cache()
     reset_rate_limit_cache()
     authed_client = TestClient(create_app())
@@ -92,9 +97,11 @@ def test_auth_succeeds_with_valid_key(monkeypatch):
 def test_rate_limit_returns_429(monkeypatch):
     # Tighten limit to 1 request/min for test predictability.
     monkeypatch.setenv("SMART_REPLY_RATE_LIMIT_PER_MINUTE", "1")
+    monkeypatch.setenv("API_KEY", "secret")
     reset_settings_cache()
     reset_rate_limit_cache()
     local_client = TestClient(create_app())
+    local_client.headers.update({"x-api-key": "secret"})
 
     payload = {"incoming_message": "Ping?", "channel": "email", "tone": "professional"}
     first = local_client.post("/v1/reply/draft", json=payload)

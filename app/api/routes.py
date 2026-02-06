@@ -3,9 +3,9 @@ import logging
 from fastapi import APIRouter, Depends
 
 from app.api.schemas import DraftRequest, DraftResponse, HealthResponse
-from app.middleware.auth import verify_api_key
 from app.middleware.rate_limit import rate_limit_dependency
 from app.services.llm import generate_reply_drafts
+from app.auth import require_api_key
 
 router = APIRouter(tags=["reply"], responses={429: {"description": "Rate limit exceeded"}})
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ async def health() -> HealthResponse:
 @router.post(
     "/v1/reply/draft",
     response_model=DraftResponse,
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_api_key)],
     summary="Generate three channel-appropriate reply drafts",
     description=(
         "Generates three reply drafts tailored to the specified channel (email, Slack, LinkedIn). "

@@ -1,6 +1,6 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-teal)
-![License](https://img.shields.io/github/license/<OWNER>/<REPO>)
+![License](https://img.shields.io/github/license/Peippo1/smart-reply-service)
 ![CI](https://img.shields.io/badge/CI-local%20tests%20passing-brightgreen)
 ![Health Check](https://img.shields.io/badge/health-checks%20passing-brightgreen)
 
@@ -41,6 +41,7 @@ Email:
 ```bash
 curl -X POST http://localhost:8000/v1/reply/draft \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
   -d '{"incoming_message":"Could you share the Q1 metrics?","channel":"email","tone":"professional"}'
 ```
 
@@ -61,6 +62,7 @@ Slack:
 ```bash
 curl -X POST http://localhost:8000/v1/reply/draft \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
   -d '{"incoming_message":"Can someone review the PR today?","channel":"slack","tone":"concise","options":{"emoji":true}}'
 ```
 
@@ -68,6 +70,7 @@ LinkedIn:
 ```bash
 curl -X POST http://localhost:8000/v1/reply/draft \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
   -d '{"incoming_message":"Enjoyed your post on data platforms—open to connecting?","channel":"linkedin","tone":"polite"}'
 ```
 
@@ -128,7 +131,7 @@ This provides lightweight uptime assurance without introducing additional infras
 ![RapidAPI health check success](docs/rapidapi-health-check.png)
 
 ### Auth & rate limiting
-- API key is optional; set `SMART_REPLY_API_KEY` to require `x-api-key`.
+- API key is required for draft generation. Set `API_KEY` in your environment and include `x-api-key` header in requests.
 - Rate limit defaults to 60 req/min per IP; override with `SMART_REPLY_RATE_LIMIT_PER_MINUTE`.
 
 Designed for safe public deployment and API marketplaces such as RapidAPI.
@@ -152,3 +155,8 @@ The pipeline is already wired for OpenAI’s Responses API — enabling higher-q
 docker build -t smart-reply-service .
 docker run -p 8000:8000 smart-reply-service
 ```
+
+## License
+
+This project is licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for full details.
